@@ -1,6 +1,6 @@
 <script>
-  import { apiRequest } from '../lib/api';
-  import { login } from '../lib/auth';
+  import { apiRequest } from '../lib/api.js';
+  import { login } from '../lib/auth.js';
 
   let username = '';
   let password = '';
@@ -12,7 +12,7 @@
       formData.append('username', username);
       formData.append('password', password);
 
-      const response = await fetch('http://localhost:8000/token', {
+      const response = await fetch('/api/token', {
           method: 'POST',
           headers: {
               'Content-Type': 'application/x-www-form-urlencoded',

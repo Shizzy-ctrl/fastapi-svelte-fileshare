@@ -1,5 +1,5 @@
 <script>
-  import { auth } from './lib/auth';
+  import { auth } from './lib/auth.js';
   import Login from './components/Login.svelte';
   import Register from './components/Register.svelte';
   import Dashboard from './components/Dashboard.svelte';

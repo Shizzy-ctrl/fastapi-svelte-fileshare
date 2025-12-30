@@ -1,6 +1,6 @@
 <script>
-  import { auth, logout } from '../lib/auth';
-  import { uploadFiles, apiRequest } from '../lib/api';
+  import { auth, logout } from '../lib/auth.js';
+  import { uploadFiles, apiRequest } from '../lib/api.js';
   import { Upload, LogOut, Link, Clock, Lock, FileText, Folder } from 'lucide-svelte';
 
   let files; // FileList

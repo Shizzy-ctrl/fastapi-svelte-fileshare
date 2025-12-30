@@ -1,6 +1,6 @@
 <script>
     import { onMount } from 'svelte';
-    import { apiRequest } from '../lib/api';
+    import { apiRequest } from '../lib/api.js';
     import { Lock, FileText, Download as DownloadIcon } from 'lucide-svelte';
 
     export let params = {}; // Provided by router

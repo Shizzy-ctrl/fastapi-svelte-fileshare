@@ -1,5 +1,5 @@
 <script>
-  import { apiRequest } from '../lib/api';
+  import { apiRequest } from '../lib/api.js';
 
   let username = '';
   let password = '';
