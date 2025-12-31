@@ -23,7 +23,7 @@
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || 'Login failed');
 
-      login(data.access_token, { username });
+      login(data.access_token, { username }, data.must_change_password);
     } catch (e) {
       error = e.message;
     }

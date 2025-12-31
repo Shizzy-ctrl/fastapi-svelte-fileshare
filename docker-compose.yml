@@ -19,6 +19,7 @@ services:
       - "8000:8000"
     volumes:
       - ./files:/app/files
+      - ./logs:/app/logs
     env_file: .env
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/filesharing

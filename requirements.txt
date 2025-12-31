@@ -8,5 +8,6 @@ passlib[bcrypt]
 bcrypt==4.0.1
 jinja2
 python-dotenv
-sqladmin
+starlette-admin
 email-validator
+itsdangerous

@@ -11,6 +11,7 @@ from app.db import get_db
 from app.models import User, FileRecord, Share
 from app.schemas import ShareResponse, ShareUpdate, FileResponse
 from app.auth import get_current_user, get_password_hash
+from app.logging_utils import log_event
 
 router = APIRouter()
 
@@ -25,8 +26,11 @@ async def upload_files(
 ):
     os.makedirs(FILES_DIR, exist_ok=True)
     
-    # Create a new Share
-    new_share = Share(owner_id=current_user.id)
+    # Create a new Share with default 30-minute expiration
+    new_share = Share(
+        owner_id=current_user.id,
+        expires_at=datetime.utcnow() + timedelta(minutes=30)
+    )
     db.add(new_share)
     await db.flush() # get ID
 
@@ -49,6 +53,13 @@ async def upload_files(
     
     await db.commit()
     await db.refresh(new_share)
+    
+    # Log the upload event
+    log_event("upload", {
+        "username": current_user.username,
+        "share_id": new_share.public_id,
+        "files": [f.filename for f in uploaded_files]
+    }, request)
     
     base_url = os.getenv("BASE_URL", "http://localhost:3000")
     if not base_url.endswith("/"):
@@ -86,6 +97,8 @@ async def update_share_settings(
              share.password_hash = get_password_hash(share_settings.password)
         
     if share_settings.expires_minutes is not None:
+        if share_settings.expires_minutes > 1440:
+             raise HTTPException(status_code=400, detail="Expiration time cannot exceed 1 day (1440 minutes)")
         share.expires_at = datetime.utcnow() + timedelta(minutes=share_settings.expires_minutes)
         
     await db.commit()

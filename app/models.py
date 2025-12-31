@@ -12,6 +12,7 @@ class User(Base):
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
+    must_change_password = Column(Boolean, default=True)
 
     shares = relationship("Share", back_populates="owner")
 

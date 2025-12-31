@@ -6,23 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.models import User
-from app.schemas import UserCreate, UserResponse, Token
-from app.auth import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from app.schemas import UserResponse, Token, ChangePassword
+from app.auth import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user
 
 router = APIRouter()
-
-@router.post("/register", response_model=UserResponse)
-async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.username == user.username))
-    if result.scalars().first():
-        raise HTTPException(status_code=400, detail="Username already registered")
-    
-    hashed_password = get_password_hash(user.password)
-    db_user = User(username=user.username, hashed_password=hashed_password)
-    db.add(db_user)
-    await db.commit()
-    await db.refresh(db_user)
-    return db_user
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
@@ -40,4 +27,20 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "must_change_password": user.must_change_password
+    }
+
+@router.post("/change-password")
+async def change_password(
+    data: ChangePassword, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    current_user.hashed_password = get_password_hash(data.new_password)
+    current_user.must_change_password = False
+    db.add(current_user)
+    await db.commit()
+    return {"message": "Password changed successfully"}

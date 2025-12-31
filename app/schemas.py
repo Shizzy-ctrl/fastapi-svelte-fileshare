@@ -12,13 +12,18 @@ class UserResponse(UserBase):
     id: int
     is_active: bool
     is_superuser: bool
+    must_change_password: bool
 
     class Config:
         from_attributes = True
 
+class ChangePassword(BaseModel):
+    new_password: str
+
 class Token(BaseModel):
     access_token: str
     token_type: str
+    must_change_password: bool
 
 class TokenData(BaseModel):
     username: Optional[str] = None
