@@ -16,7 +16,7 @@ services:
   web:
     build: .
     ports:
-      - "10.0.0.0:8000:8000"
+      - "10.0.0.1:8000:8000"
     volumes:
       - ./files:/app/files
       - ./logs:/app/logs
