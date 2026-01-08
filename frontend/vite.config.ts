@@ -16,7 +16,8 @@ export default defineConfig({
     port: 5173,
     allowedHosts: [
       'share.grentech.dev',
-      '.grentech.dev' // Opcjonalnie: pozwala na wszystkie subdomeny
+      '.grentech.dev', // Opcjonalnie: pozwala na wszystkie subdomeny
+      'localhost'
     ],
     proxy: {
       '/api': {

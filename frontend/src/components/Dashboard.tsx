@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { uploadFiles, apiRequest } from '../lib/api'
+import { uploadFiles, apiRequest, ApiError } from '../lib/api'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -15,7 +15,7 @@ interface ShareResult {
 }
 
 export default function Dashboard() {
-  const { user, token, logout } = useAuth()
+  const { user, token, logout, handleTokenExpiration } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [files, setFiles] = useState<FileList | null>(null)
   const [uploadResult, setUploadResult] = useState<ShareResult | null>(null)
@@ -26,6 +26,7 @@ export default function Dashboard() {
   })
   const [shareUpdateMsg, setShareUpdateMsg] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isUpdatingSettings, setIsUpdatingSettings] = useState(false)
 
   async function handleUpload() {
     if (!files || files.length === 0) return
@@ -35,9 +36,14 @@ export default function Dashboard() {
       setUploadResult(result)
       setError('')
       setShareSettings({ password: '', expires_minutes: '30' })
-      setShareUpdateMsg('')
+      setShareUpdateMsg('Files uploaded successfully!')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Upload failed')
+      const error = e as ApiError
+      if (error.isTokenExpired) {
+        handleTokenExpiration()
+      } else {
+        setError(error instanceof Error ? error.message : 'Upload failed')
+      }
       setUploadResult(null)
     } finally {
       setIsLoading(false)
@@ -46,7 +52,7 @@ export default function Dashboard() {
 
   async function updateShareSettings() {
     if (!uploadResult) return
-    setIsLoading(true)
+    setIsUpdatingSettings(true)
     try {
       const body = {
         public_id: uploadResult.public_id,
@@ -57,9 +63,14 @@ export default function Dashboard() {
       await apiRequest(`/share/${uploadResult.public_id}`, 'POST', body, token!)
       setShareUpdateMsg('Settings updated successfully!')
     } catch (e) {
-      setShareUpdateMsg('Error updating settings: ' + (e instanceof Error ? e.message : 'Unknown error'))
+      const error = e as ApiError
+      if (error.isTokenExpired) {
+        handleTokenExpiration()
+      } else {
+        setShareUpdateMsg('Error updating settings: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      }
     } finally {
-      setIsLoading(false)
+      setIsUpdatingSettings(false)
     }
   }
 
@@ -132,9 +143,16 @@ export default function Dashboard() {
             <Button 
               onClick={handleUpload} 
               disabled={!files || isLoading}
-              className="w-full"
+              className="w-full relative"
             >
-              {isLoading ? 'Uploading...' : 'Upload Files'}
+              {isLoading && (
+                <div className="absolute inset-0 bg-background/50 rounded-md flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                </div>
+              )}
+              <span className={isLoading ? 'opacity-50' : ''}>
+                {isLoading ? 'Uploading...' : 'Upload Files'}
+              </span>
             </Button>
           </div>
         </section>
@@ -164,7 +182,7 @@ export default function Dashboard() {
               <h4 className="text-md font-medium dark:text-white">Share Settings</h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Lock size={16} /> Password Protection (Optional)
                   </Label>
@@ -175,7 +193,7 @@ export default function Dashboard() {
                     placeholder="Set a password"
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Clock size={16} /> Expiration Time
                   </Label>
@@ -201,16 +219,26 @@ export default function Dashboard() {
 
               <Button 
                 onClick={updateShareSettings}
-                disabled={isLoading}
+                disabled={isUpdatingSettings}
                 variant="secondary"
+                className="flex items-center gap-2 relative"
               >
-                {isLoading ? 'Saving...' : 'Save Settings'}
+                {isUpdatingSettings && (
+                  <div className="absolute inset-0 bg-secondary/50 rounded-md flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                  </div>
+                )}
+                <span className={isUpdatingSettings ? 'opacity-50' : ''}>
+                  {isUpdatingSettings ? 'Saving...' : 'Save Settings'}
+                </span>
               </Button>
               
               {shareUpdateMsg && (
-                <p className={`text-sm mt-2 ${shareUpdateMsg.includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
-                  {shareUpdateMsg}
-                </p>
+                <Alert className={shareUpdateMsg.includes('Error') ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950' : 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'}>
+                  <AlertDescription className={shareUpdateMsg.includes('Error') ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}>
+                    {shareUpdateMsg}
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
           </section>

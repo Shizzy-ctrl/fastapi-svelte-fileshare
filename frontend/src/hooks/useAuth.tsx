@@ -1,4 +1,5 @@
-import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, ReactNode, useState } from 'react';
+import SessionExpiredModal from '../components/SessionExpiredModal';
 
 interface User {
   username: string;
@@ -57,12 +58,14 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 interface AuthContextType extends AuthState {
   login: (token: string, user: User, mustChangePassword: boolean) => void;
   logout: () => void;
+  handleTokenExpiration: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
 
   useEffect(() => {
     // Check if we have a token in local storage
@@ -99,13 +102,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'LOGOUT' });
   };
 
+  const handleTokenExpiration = () => {
+    setShowSessionExpiredModal(true);
+  };
+
+  const handleSessionExpiredClose = () => {
+    setShowSessionExpiredModal(false);
+    logout();
+  };
+
   const value: AuthContextType = {
     ...state,
     login,
     logout,
+    handleTokenExpiration,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <>
+      <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+      {showSessionExpiredModal && (
+        <SessionExpiredModal 
+          isOpen={showSessionExpiredModal} 
+          onClose={handleSessionExpiredClose} 
+        />
+      )}
+    </>
+  );
 }
 
 export function useAuth(): AuthContextType {

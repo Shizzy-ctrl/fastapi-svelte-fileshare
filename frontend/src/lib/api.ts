@@ -6,6 +6,11 @@ export interface ApiResponse<T = any> {
   error?: string;
 }
 
+export interface ApiError extends Error {
+  isTokenExpired?: boolean;
+  status?: number;
+}
+
 export async function apiRequest<T = any>(
   endpoint: string, 
   method: string = 'GET', 
@@ -36,12 +41,25 @@ export async function apiRequest<T = any>(
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       const text = await response.text();
-      throw new Error(`Server returned non-JSON response (${response.status}): ${text.substring(0, 100)}...`);
+      const error = new Error(`Server returned non-JSON response (${response.status}): ${text.substring(0, 100)}...`) as ApiError;
+      error.status = response.status;
+      throw error;
     }
 
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.detail || 'API Request Failed');
+      const error = new Error(data.detail || 'API Request Failed') as ApiError;
+      error.status = response.status;
+      
+      // Check for token expiration
+      if (response.status === 401 || 
+          data.detail?.toLowerCase().includes('token') ||
+          data.detail?.toLowerCase().includes('expired') ||
+          data.detail?.toLowerCase().includes('unauthorized')) {
+        error.isTokenExpired = true;
+      }
+      
+      throw error;
     }
     return data;
   } catch (error) {
@@ -67,12 +85,25 @@ export async function uploadFiles(files: FileList, token: string): Promise<any> 
   const contentType = response.headers.get('content-type');
   if (!contentType || !contentType.includes('application/json')) {
     const text = await response.text();
-    throw new Error(`Upload failed with non-JSON response (${response.status}): ${text.substring(0, 100)}...`);
+    const error = new Error(`Upload failed with non-JSON response (${response.status}): ${text.substring(0, 100)}...`) as ApiError;
+    error.status = response.status;
+    throw error;
   }
 
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.detail || 'Upload Failed');
+    const error = new Error(data.detail || 'Upload Failed') as ApiError;
+    error.status = response.status;
+    
+    // Check for token expiration
+    if (response.status === 401 || 
+        data.detail?.toLowerCase().includes('token') ||
+        data.detail?.toLowerCase().includes('expired') ||
+        data.detail?.toLowerCase().includes('unauthorized')) {
+      error.isTokenExpired = true;
+    }
+    
+    throw error;
   }
   return data;
 }
